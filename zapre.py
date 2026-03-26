@@ -586,7 +586,9 @@ def main():
     
     notify_summary = f"📊 账号: {ok_acc}/{len(results)} | 服务器: {ok_srv}/{total_srv}\n{'─'*30}\n"
     for r in results:
-        notify_summary += f"{'✅' if r.get('success') else '❌'} {r['username']}: {r.get('message','')}\n"
+        u = r['username']
+        masked_user = f"{u[:3]}***{u[u.find('@'):]}" if '@' in u else mask(u)
+        notify_summary += f"{'✅' if r.get('success') else '❌'} {masked_user}: {r.get('message','')}\n"
         for s in r.get("servers", []):
             status = '✓' if s.get('success') else '✗'
             notify_summary += f"  {status} Server {s['server_id']}: {s.get('message','')}\n"
