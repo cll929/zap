@@ -285,24 +285,38 @@ def login(sb, user: str, pwd: str, idx: int) -> bool:
                             break
                     except:
                         continue
+                
                 if pwd_found:
                     break
                 time.sleep(1)
-            
+        
             if not pwd_found:
                 print("[WARN] 密码页面未加载")
                 if attempt < 2:
                     continue
                 return False
-            
+        
+            # --- 新增：处理密码页面的验证码 ---
+            time.sleep(2) 
+            handle_turnstile(sb, idx) 
+            # -------------------------------
+
             time.sleep(1)
             try:
-                sb.click('button[type="submit"]')
+                # 优先使用 JS 点击，避开验证框的透明遮挡
+                sb.execute_script('document.querySelector("button[type=\'submit\']").click()')
+                print("[INFO] 已通过 JS 触发登录按钮")
             except:
                 sb.click('button')
-            
-            time.sleep(6)
+        
+            # --- 新增：点击后可能还有二次验证或等待跳转 ---
+            time.sleep(3)
+            handle_turnstile(sb, idx) 
+            # -------------------------------
+        
+            time.sleep(5)
             sb.save_screenshot(shot(idx, "02-result"))
+                
             
             current_url = sb.get_current_url()
             if "dash.zampto.net" in current_url or "sign-in" not in current_url:
