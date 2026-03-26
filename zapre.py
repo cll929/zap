@@ -302,26 +302,33 @@ def login(sb, user: str, pwd: str, idx: int) -> bool:
             # -------------------------------
 
             time.sleep(1)
+            # 优先使用 JS 点击，避开验证框的透明遮挡
             try:
-                # 优先使用 JS 点击，避开验证框的透明遮挡
                 sb.execute_script('document.querySelector("button[type=\'submit\']").click()')
                 print("[INFO] 已通过 JS 触发登录按钮")
             except:
                 sb.click('button')
         
-            # --- 新增：点击后可能还有二次验证或等待跳转 ---
-            time.sleep(3)
-            handle_turnstile(sb, idx) 
-            # -------------------------------
-        
-            time.sleep(5)
+            # --- 新增：循环检测跳转，并在 9 秒后补点一次 ---
+            login_success = False
+            for i in range(6):  # 每3秒检查一次，共检查18秒
+                time.sleep(3)
+                if "dash.zampto.net" in sb.get_current_url():
+                    login_success = True
+                    break
+                if i == 2: # 9秒还没跳，补点一次
+                    print("[INFO] 尚未跳转，尝试补处理验证并重点...")
+                    handle_turnstile(sb, idx)
+                    try:
+                        sb.execute_script('document.querySelector("button[type=\'submit\']").click()')
+                    except: pass
+
             sb.save_screenshot(shot(idx, "02-result"))
-                
             
-            current_url = sb.get_current_url()
-            if "dash.zampto.net" in current_url or "sign-in" not in current_url:
+            if login_success:
                 print("[INFO] ✅ 登录成功")
                 return True
+            # --- 替换结束 ---
             
             print(f"[WARN] 尝试 {attempt + 1}: 登录未成功")
             
@@ -337,9 +344,13 @@ def login(sb, user: str, pwd: str, idx: int) -> bool:
 def logout(sb):
     try:
         sb.delete_all_cookies()
+        # --- 新增：强制清理浏览器缓存和本地存储 ---
+        sb.execute_script("window.localStorage.clear();")
+        sb.execute_script("window.sessionStorage.clear();")
+        # -------------------------------------
         sb.open("about:blank")
-        time.sleep(1)
-        print("[INFO] 已退出登录")
+        time.sleep(2)
+        print("[INFO] 已退出登录并清理环境")
     except Exception as e:
         print(f"[WARN] 退出时出错: {e}")
 
