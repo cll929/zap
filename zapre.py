@@ -147,7 +147,7 @@ def detect_turnstile_type(sb) -> str:
         print(f"[WARN] 检测类型出错: {e}")
         return "visible"  # 出错时默认 visible，更安全
 
-def wait_turnstile_complete(sb, timeout: int = 60) -> str:
+def wait_turnstile_complete(sb, timeout: int = 30) -> str:
     """
     等待 Turnstile 完成
     返回: "token", "closed", "timeout"
@@ -447,7 +447,13 @@ def renew(sb, sid: str, idx: int) -> Dict[str, Any]:
     sb.save_screenshot(shot(idx, f"srv-{sid}-modal"))
     
     # 处理 Turnstile
-    handle_turnstile(sb, idx)
+    # --- 修改为 ---
+    success_verify = handle_turnstile(sb, idx)
+    if not success_verify:
+        print("[WARN] 验证码超时或失效，尝试刷新页面...")
+        sb.refresh() # 刷新页面尝试重置状态
+        result["message"] = "验证码超时"
+        return result # 退出当前服务器续期，继续下一个，防止卡死
     
     time.sleep(3)
     
